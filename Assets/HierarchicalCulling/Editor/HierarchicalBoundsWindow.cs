@@ -45,7 +45,7 @@ namespace Optim.HierarchicalCulling.Editor
             {
                 hb.ManualUpdate();
             }
-            if (GUILayout.Button("Recalc", GUILayout.Width(60)))
+            if (GUILayout.Button("Recalculate", GUILayout.Width(60)))
             {
                 hb.RecalculateBounds();
             }
