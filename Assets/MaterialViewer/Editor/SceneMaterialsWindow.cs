@@ -7,23 +7,36 @@ using UnityEngine;
 
 namespace Optim.MaterialViewer.Editor
 {
+    // SceneMaterialsWindow は現在シーンに存在する全てのマテリアルを一覧表示するウィンドウです。
+    // 各マテリアルの詳細情報を確認し、シーン上での利用状況を簡単に調査できます。
     internal class SceneMaterialsWindow : EditorWindow
     {
+        // 各マテリアルの使用状況を保持するための簡易データ構造
         private class MaterialInfo
         {
+            // 参照しているマテリアル本体
             public Material Material;
+            // いくつのサブメッシュから使用されているか
             public int SubMeshCount;
+            // 使用しているRendererの一覧
             public HashSet<Renderer> Renderers = new();
+            // 静的オブジェクトから使用されているか
             public bool UsedStatic;
+            // 動的オブジェクトから使用されているか
             public bool UsedDynamic;
         }
 
+        // 一覧表示を行うための TreeView 実装
         private class MaterialTreeView : TreeView
         {
+            // 表示対象となるマテリアル情報のリスト
             private readonly List<MaterialInfo> items;
+            // ヘッダー管理用
             private readonly MultiColumnHeader header;
+            // 選択が変更された際に通知するイベント
             public event Action<MaterialInfo> SelectionChanged;
 
+            // コンストラクタ。TreeView の初期設定を行う
             public MaterialTreeView(TreeViewState state, MultiColumnHeader header, List<MaterialInfo> items)
                 : base(state, header)
             {
@@ -34,6 +47,7 @@ namespace Optim.MaterialViewer.Editor
                 Reload();
             }
 
+            // ルート要素の生成
             protected override TreeViewItem BuildRoot()
             {
                 var root = new TreeViewItem { id = 0, depth = -1, displayName = "root" };
@@ -46,6 +60,7 @@ namespace Optim.MaterialViewer.Editor
                 return root;
             }
 
+            // 各行の描画処理
             protected override void RowGUI(RowGUIArgs args)
             {
                 var item = items[args.item.id - 1];
@@ -93,6 +108,7 @@ namespace Optim.MaterialViewer.Editor
                 }
             }
 
+            // 行選択が変更された際に呼び出される
             protected override void SelectionChanged(IList<int> selectedIds)
             {
                 if (selectedIds.Count > 0)
@@ -101,6 +117,7 @@ namespace Optim.MaterialViewer.Editor
                     SelectionChanged?.Invoke(null);
             }
 
+            // ダブルクリック時に対象のマテリアルをピン留めする
             protected override void DoubleClickedItem(int id)
             {
                 var info = items[id - 1];
@@ -108,6 +125,7 @@ namespace Optim.MaterialViewer.Editor
                 Selection.activeObject = info.Material;
             }
 
+            // ヘッダークリックによるソート処理
             protected override void SortByMultipleColumns()
             {
                 if (items.Count == 0)
@@ -124,6 +142,7 @@ namespace Optim.MaterialViewer.Editor
                 Reload();
             }
 
+            // 複数の比較処理を連結するユーティリティ
             private static Comparison<MaterialInfo> Combine(Comparison<MaterialInfo> a, Comparison<MaterialInfo> b)
             {
                 return (x, y) =>
@@ -133,6 +152,7 @@ namespace Optim.MaterialViewer.Editor
                 };
             }
 
+            // 列ごとの比較関数を取得
             private static Comparison<MaterialInfo> GetCompare(int column, bool asc)
             {
                 int Sign(int r) => asc ? r : -r;
@@ -161,16 +181,19 @@ namespace Optim.MaterialViewer.Editor
         private MaterialInfo selected;
 
         [MenuItem("Window/Scene Materials Viewer")]
+        // メニューからウィンドウを開く
         private static void Open()
         {
             GetWindow<SceneMaterialsWindow>("Scene Materials");
         }
 
+        // ウィンドウ有効化時に初期化を行う
         private void OnEnable()
         {
             Refresh();
         }
 
+        // マテリアル情報を再収集し TreeView を再構築する
         private void Refresh()
         {
             CollectMaterials();
@@ -183,6 +206,7 @@ namespace Optim.MaterialViewer.Editor
             searchField = new SearchField();
         }
 
+        // メインの描画処理
         private void OnGUI()
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
@@ -204,6 +228,7 @@ namespace Optim.MaterialViewer.Editor
             treeView.OnGUI(right);
         }
 
+        // 右側に表示する詳細ペインの描画
         private void DrawDetailPane(Rect rect)
         {
             GUILayout.BeginArea(rect, EditorStyles.helpBox);
@@ -230,6 +255,7 @@ namespace Optim.MaterialViewer.Editor
             GUILayout.EndArea();
         }
 
+        // シーン内の全 Renderer からマテリアルを収集する
         private void CollectMaterials()
         {
             materials.Clear();
@@ -257,6 +283,7 @@ namespace Optim.MaterialViewer.Editor
             materials.AddRange(dict.Values);
         }
 
+        // TreeView のヘッダー定義を作成
         private static MultiColumnHeaderState CreateHeaderState()
         {
             var columns = new[]
@@ -276,6 +303,7 @@ namespace Optim.MaterialViewer.Editor
             return new MultiColumnHeaderState(columns);
         }
 
+        // ZWrite 設定を取得
         private static string GetZWrite(Material mat)
         {
             if (mat.HasProperty("_ZWrite"))
@@ -283,6 +311,7 @@ namespace Optim.MaterialViewer.Editor
             return "";
         }
 
+        // カリングモードを取得
         private static string GetCull(Material mat)
         {
             if (mat.HasProperty("_Cull"))
@@ -293,6 +322,7 @@ namespace Optim.MaterialViewer.Editor
             return "";
         }
 
+        // ブレンドモードを取得
         private static string GetBlend(Material mat)
         {
             if (mat.HasProperty("_SrcBlend") && mat.HasProperty("_DstBlend"))
@@ -304,6 +334,7 @@ namespace Optim.MaterialViewer.Editor
             return "";
         }
 
+        // SRP Batching の互換性を確認
         private static string GetSRPBatching(Material mat)
         {
 #if UNITY_EDITOR
@@ -314,6 +345,7 @@ namespace Optim.MaterialViewer.Editor
 #endif
         }
 
+        // 静的・動的の使用状況を文字列化
         private static string GetStaticState(MaterialInfo info)
         {
             if (info.UsedStatic && info.UsedDynamic)
