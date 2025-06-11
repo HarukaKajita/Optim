@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Optim.HierarchicalCulling
@@ -22,7 +23,6 @@ namespace Optim.HierarchicalCulling
         public class RendererInfo
         {
             public Renderer Renderer;
-            public bool OriginalEnabled;
         }
 
         [SerializeField]
@@ -93,9 +93,7 @@ namespace Optim.HierarchicalCulling
         private void UnregisterFromParent()
         {
             if (parent)
-            {
                 parent.children.Remove(this);
-            }
         }
 
         private void Update()
@@ -128,11 +126,17 @@ namespace Optim.HierarchicalCulling
         {
             if (Camera.main == null)
                 return;
-            Plane[] planes = GeometryUtility.CalculateFrustumPlanes(Camera.main);
-            bool intersects = GeometryUtility.TestPlanesAABB(planes, bounds);
+            var planes = GeometryUtility.CalculateFrustumPlanes(Camera.main);
+            planes = planes.Take(4).ToArray(); // near clip planeとfar clip planeは無視する
+            var intersects = GeometryUtility.TestPlanesAABB(planes, bounds);
             SetRendered(intersects);
         }
 
+        [ContextMenu("Rendered State True")]
+        public void SetRenderedTrue() => SetRendered(true);
+
+        [ContextMenu("Rendered State False")]
+        public void SetRenderedFalse() => SetRendered(false);
         private void SetRendered(bool value)
         {
             if (rendered == value)
@@ -140,17 +144,11 @@ namespace Optim.HierarchicalCulling
             rendered = value;
 
             foreach (var info in renderers)
-            {
                 if (info.Renderer)
-                {
-                    info.Renderer.enabled = rendered && info.OriginalEnabled;
-                }
-            }
+                    info.Renderer.forceRenderingOff = !rendered;
 
             foreach (var child in children)
-            {
                 child.SetRendered(rendered);
-            }
 
             OnRenderedChanged?.Invoke(rendered);
         }
@@ -183,7 +181,7 @@ namespace Optim.HierarchicalCulling
             {
                 if (r.GetComponentInParent<HierarchicalBounds>() != this)
                     continue;
-                RendererInfo info = new RendererInfo { Renderer = r, OriginalEnabled = r.enabled };
+                RendererInfo info = new RendererInfo { Renderer = r};
                 renderers.Add(info);
                 if (bounds.size == Vector3.zero)
                     bounds = r.bounds;
