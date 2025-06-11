@@ -11,7 +11,7 @@ namespace Optim.ScenePartitioning.Editor
     {
         public override VisualElement CreatePanelContent()
         {
-            var button = new ToolbarButton(Toggle)
+            var button = new ToolbarButton(() => Toggle())
             {
                 text = "Toggle Cells"
             };
