@@ -10,7 +10,8 @@ namespace Optim.FrustumIntersection
     {
         public bool Intersects(Vector3 v0, Vector3 v1, Vector3 v2, NativeArray<Plane> planes)
         {
-            for (int i = 0; i < planes.Length; ++i)
+            int planeCount = planes.Length;
+            for (int i = 0; i < planeCount; ++i)
             {
                 Plane p = planes[i];
                 float d0 = p.GetDistanceToPoint(v0);
