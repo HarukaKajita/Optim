@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Unity.Collections;
 using UnityEngine;
 
 namespace Optim.FrustumIntersection
@@ -29,12 +30,13 @@ namespace Optim.FrustumIntersection
 
             var vertices = mesh.vertices;
             var indices = mesh.triangles;
+            var nativePlanes = new NativeArray<Plane>(planes, Allocator.Temp);
             for (int i = 0; i < indices.Length; i += 3)
             {
                 Vector3 v0 = vertices[indices[i]];
                 Vector3 v1 = vertices[indices[i + 1]];
                 Vector3 v2 = vertices[indices[i + 2]];
-                if (checker.Intersects(v0, v1, v2, planes))
+                if (checker.Intersects(v0, v1, v2, nativePlanes))
                 {
                     if (options.CollectIndices)
                     {
@@ -46,6 +48,8 @@ namespace Optim.FrustumIntersection
                     }
                 }
             }
+
+            nativePlanes.Dispose();
 
             if (watch != null)
             {
