@@ -1,0 +1,39 @@
+#pragma kernel CSMain
+
+struct Plane
+{
+    float3 normal;
+    float distance;
+};
+
+StructuredBuffer<float3> _Vertices;
+StructuredBuffer<int> _Indices;
+StructuredBuffer<Plane> _Planes;
+RWStructuredBuffer<int> _Results;
+uint _PlaneCount;
+
+[numthreads(64,1,1)]
+void CSMain (uint id : SV_DispatchThreadID)
+{
+    uint triIndex = id;
+    uint i = triIndex * 3;
+    if (i + 2 >= _Indices.Length)
+        return;
+
+    float3 v0 = _Vertices[_Indices[i]];
+    float3 v1 = _Vertices[_Indices[i+1]];
+    float3 v2 = _Vertices[_Indices[i+2]];
+
+    bool inside = true;
+    for (uint p = 0; p < _PlaneCount && inside; ++p)
+    {
+        Plane pl = _Planes[p];
+        float d0 = dot(pl.normal, v0) + pl.distance;
+        float d1 = dot(pl.normal, v1) + pl.distance;
+        float d2 = dot(pl.normal, v2) + pl.distance;
+        if (d0 < 0 && d1 < 0 && d2 < 0)
+            inside = false;
+    }
+
+    _Results[triIndex] = inside ? 1 : 0;
+}
