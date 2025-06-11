@@ -177,8 +177,6 @@ namespace Optim.MaterialViewer.Editor
                 GUILayout.FlexibleSpace();
             }
         }
-
-        
         
         private VisualElement CreateSortSettingsGUI()
         {
@@ -199,6 +197,13 @@ namespace Optim.MaterialViewer.Editor
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.alignItems = Align.Center;
 
+                // リストの並び順がソートの優先度
+                sortSettings.priority[i] = i;
+                // ソートの優先度を表示するためのラベル
+                var priorityLabel = new Label((i + 1).ToString());
+                priorityLabel.style.width = 20;
+                row.Add(priorityLabel);
+                
                 // ソートの有効/無効
                 var toggleToEnable = new Toggle();
                 toggleToEnable.style.width = 20;
@@ -215,18 +220,6 @@ namespace Optim.MaterialViewer.Editor
                 var columnLabel = new Label(ColumnNames[i]);
                 columnLabel.style.width = 100;
                 row.Add(columnLabel);
-
-                // ソートの優先度
-                var priorityField = new IntegerField();
-                priorityField.value = sortSettings.priority[i];
-                priorityField.style.width = 30;
-                
-                priorityField.RegisterValueChangedCallback(evt =>
-                {
-                    sortSettings.priority[i] = evt.newValue;
-                    ApplySort();
-                });
-                row.Add(priorityField);
                 
                 // ソートの種類
                 var sortType = new PopupField<SortType>(
