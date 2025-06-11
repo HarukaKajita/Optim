@@ -11,13 +11,14 @@ StructuredBuffer<int> _Indices;
 StructuredBuffer<Plane> _Planes;
 RWStructuredBuffer<int> _Results;
 uint _PlaneCount;
+uint _IndexCount;
 
 [numthreads(64,1,1)]
 void CSMain (uint id : SV_DispatchThreadID)
 {
     uint triIndex = id;
     uint i = triIndex * 3;
-    if (i + 2 >= _Indices.Length)
+    if (i + 2 >= _IndexCount)
         return;
 
     float3 v0 = _Vertices[_Indices[i]];
