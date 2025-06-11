@@ -55,22 +55,9 @@ namespace Optim.FrustumIntersection
             var results = new int[triCount];
             rbuf.GetData(results);
 
-            if (options.CollectIndices)
-            {
-                for (int i = 0; i < triCount; ++i)
-                {
-                    if (results[i] != 0)
-                        result.IntersectedIndices.Add(i);
-                }
-            }
-            else
-            {
-                for (int i = 0; i < triCount; ++i)
-                {
-                    if (results[i] != 0)
-                        break;
-                }
-            }
+            result.Intersections = new bool[triCount];
+            for (int i = 0; i < triCount; ++i)
+                result.Intersections[i] = results[i] != 0;
 
             vbuf.Dispose();
             ibuf.Dispose();

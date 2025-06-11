@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Optim.FrustumIntersection
@@ -23,11 +22,6 @@ namespace Optim.FrustumIntersection
         public FrustumType Frustum = FrustumType.AccurateFrustum;
 
         /// <summary>
-        /// When true, collect intersecting triangle indices.
-        /// </summary>
-        public bool CollectIndices = false;
-
-        /// <summary>
         /// When true, measure processing time in seconds.
         /// </summary>
         public bool MeasureTime = false;
@@ -39,9 +33,9 @@ namespace Optim.FrustumIntersection
     public class IntersectionResult
     {
         /// <summary>
-        /// Indices of intersecting triangles when <see cref="IntersectionOptions.CollectIndices"/> is enabled.
+        /// True when the triangle at the corresponding index intersects the frustum.
         /// </summary>
-        public List<int> IntersectedIndices = new();
+        public bool[] Intersections;
 
         /// <summary>
         /// Processing time in seconds. Valid only when <see cref="IntersectionOptions.MeasureTime"/> is enabled.
