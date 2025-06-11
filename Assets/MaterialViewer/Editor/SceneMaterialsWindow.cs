@@ -258,18 +258,16 @@ namespace Optim.MaterialViewer.Editor
             if (selected != null)
             {
                 EditorGUILayout.LabelField(selected.Material.name, EditorStyles.boldLabel);
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Keywords:");
-                foreach (var kw in selected.Material.shaderKeywords.OrderBy(k => k))
-                {
-                    EditorGUILayout.LabelField("  " + kw);
-                }
+                // 使用しているレンダラー
                 EditorGUILayout.Space();
                 EditorGUILayout.LabelField("Used By:");
                 foreach (var r in selected.Renderers)
-                {
                     EditorGUILayout.ObjectField(r.gameObject.name, r, typeof(Renderer), true);
-                }
+                // キーワード
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Keywords:");
+                foreach (var kw in selected.Material.shaderKeywords.OrderBy(k => k))
+                    EditorGUILayout.LabelField(kw);
             }
             else
             {
