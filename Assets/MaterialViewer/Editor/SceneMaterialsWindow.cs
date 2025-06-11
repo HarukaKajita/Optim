@@ -201,7 +201,7 @@ namespace Optim.MaterialViewer.Editor
             header = new MultiColumnHeader(CreateHeaderState());
             header.canSort = true;
             treeView = new MaterialTreeView(state, header, materials);
-            header.sortingChanged += treeView.OnSortingChanged;
+            // header.sortingChanged += treeView.OnSortingChanged;
             treeView.OnSelectionChanged += info => selected = info;
             searchField = new SearchField();
         }
