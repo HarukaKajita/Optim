@@ -1,4 +1,5 @@
 using UnityEngine;
+using Unity.Collections;
 
 namespace Optim.FrustumIntersection
 {
@@ -7,10 +8,12 @@ namespace Optim.FrustumIntersection
     /// </summary>
     public class DefaultTriangleChecker : ITriangleIntersectionChecker
     {
-        public bool Intersects(Vector3 v0, Vector3 v1, Vector3 v2, Plane[] planes)
+        public bool Intersects(Vector3 v0, Vector3 v1, Vector3 v2, NativeArray<Plane> planes)
         {
-            foreach (var p in planes)
+            int planeCount = planes.Length;
+            for (int i = 0; i < planeCount; ++i)
             {
+                Plane p = planes[i];
                 float d0 = p.GetDistanceToPoint(v0);
                 float d1 = p.GetDistanceToPoint(v1);
                 float d2 = p.GetDistanceToPoint(v2);

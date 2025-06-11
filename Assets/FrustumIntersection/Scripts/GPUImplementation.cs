@@ -29,7 +29,8 @@ namespace Optim.FrustumIntersection
 
             var vertices = mesh.vertices;
             var indices = mesh.triangles;
-            int triCount = indices.Length / 3;
+            int indexCount = indices.Length;
+            int triCount = indexCount / 3;
 
             ComputeBuffer vbuf = new ComputeBuffer(vertices.Length, sizeof(float) * 3);
             ComputeBuffer ibuf = new ComputeBuffer(indices.Length, sizeof(int));
@@ -44,6 +45,7 @@ namespace Optim.FrustumIntersection
             shader.SetBuffer(kernel, "_Planes", pbuf);
             shader.SetBuffer(kernel, "_Results", rbuf);
             shader.SetInt("_PlaneCount", planes.Length);
+            shader.SetInt("_IndexCount", indexCount);
 
             uint threadGroupSizeX;
             shader.GetKernelThreadGroupSizes(kernel, out threadGroupSizeX, out _, out _);
