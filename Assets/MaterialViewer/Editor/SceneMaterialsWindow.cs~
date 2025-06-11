@@ -339,7 +339,6 @@ namespace Optim.MaterialViewer.Editor
         {
 #if UNITY_EDITOR
             return "-";
-            // シェーダーが SRP Batcher に対応しているかを確認するコードが分からないので保留
             // var code = UnityEditor.Rendering.ShaderUtil.GetSRPBatcherCompatibilityCode(mat.shader);
             // return code == UnityEditor.Rendering.ShaderUtil.SRPBatcherCompatibilityCode.SRPBatcherCompatible ? "Compatible" : "Not";
 #else
