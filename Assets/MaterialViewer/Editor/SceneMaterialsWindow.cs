@@ -34,7 +34,7 @@ namespace Optim.MaterialViewer.Editor
             // ヘッダー管理用
             private readonly MultiColumnHeader header;
             // 選択が変更された際に通知するイベント
-            public event Action<MaterialInfo> SelectionChanged;
+            public event Action<MaterialInfo> OnSelectionChanged;
 
             // コンストラクタ。TreeView の初期設定を行う
             public MaterialTreeView(TreeViewState state, MultiColumnHeader header, List<MaterialInfo> items)
@@ -112,9 +112,9 @@ namespace Optim.MaterialViewer.Editor
             protected override void SelectionChanged(IList<int> selectedIds)
             {
                 if (selectedIds.Count > 0)
-                    SelectionChanged?.Invoke(items[selectedIds[0] - 1]);
+                    OnSelectionChanged?.Invoke(items[selectedIds[0] - 1]);
                 else
-                    SelectionChanged?.Invoke(null);
+                    OnSelectionChanged?.Invoke(null);
             }
 
             // ダブルクリック時に対象のマテリアルをピン留めする
@@ -202,7 +202,7 @@ namespace Optim.MaterialViewer.Editor
             header.canSort = true;
             treeView = new MaterialTreeView(state, header, materials);
             header.sortingChanged += treeView.OnSortingChanged;
-            treeView.SelectionChanged += info => selected = info;
+            treeView.OnSelectionChanged += info => selected = info;
             searchField = new SearchField();
         }
 
