@@ -2,212 +2,139 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Optim.MaterialViewer.Editor
 {
-    // SceneMaterialsWindow は現在シーンに存在する全てのマテリアルを一覧表示するウィンドウです。
-    // 各マテリアルの詳細情報を確認し、シーン上での利用状況を簡単に調査できます。
+    // SceneMaterialsWindow shows all materials in the current scene using
+    // MultiColumnListView. Columns can be sorted by custom multi column rules
+    // specified via GUI elements placed above the list view. A detail pane is
+    // displayed on the left side of the window.
     internal class SceneMaterialsWindow : EditorWindow
     {
-        // 各マテリアルの使用状況を保持するための簡易データ構造
         private class MaterialInfo
         {
-            // 参照しているマテリアル本体
             public Material Material;
-            // いくつのサブメッシュから使用されているか
             public int SubMeshCount;
-            // 使用しているRendererの一覧
             public HashSet<Renderer> Renderers = new();
-            // 静的オブジェクトから使用されているか
             public bool UsedStatic;
-            // 動的オブジェクトから使用されているか
             public bool UsedDynamic;
         }
 
-        // 一覧表示を行うための TreeView 実装
-        private class MaterialTreeView : TreeView
+        private static readonly string[] ColumnNames =
         {
-            // 表示対象となるマテリアル情報のリスト
-            private readonly List<MaterialInfo> items;
-            // ヘッダー管理用
-            private readonly MultiColumnHeader header;
-            // 選択が変更された際に通知するイベント
-            public event Action<MaterialInfo> OnSelectionChanged;
+            "Name", "SubMeshes", "Shader", "Queue", "Instancing", "Static",
+            "Keywords", "ZWrite", "Cull", "Blend", "SRP"
+        };
 
-            // コンストラクタ。TreeView の初期設定を行う
-            public MaterialTreeView(TreeViewState state, MultiColumnHeader header, List<MaterialInfo> items)
-                : base(state, header)
-            {
-                this.items = items;
-                this.header = header;
-                rowHeight = EditorGUIUtility.singleLineHeight + 2f;
-                showAlternatingRowBackgrounds = true;
-                Reload();
-            }
+        private const float DetailWidth = 250f;
 
-            // ルート要素の生成
-            protected override TreeViewItem BuildRoot()
-            {
-                var root = new TreeViewItem { id = 0, depth = -1, displayName = "root" };
-                var all = new List<TreeViewItem>();
-                for (int i = 0; i < items.Count; ++i)
-                {
-                    all.Add(new TreeViewItem { id = i + 1, depth = 0, displayName = items[i].Material.name });
-                }
-                SetupParentsAndChildrenFromDepths(root, all);
-                return root;
-            }
-
-            // 各行の描画処理
-            protected override void RowGUI(RowGUIArgs args)
-            {
-                var item = items[args.item.id - 1];
-                for (int i = 0; i < args.GetNumVisibleColumns(); ++i)
-                {
-                    Rect rect = args.GetCellRect(i);
-                    CenterRectUsingSingleLineHeight(ref rect);
-                    int col = args.GetColumn(i);
-                    switch (col)
-                    {
-                        case 0:
-                            EditorGUI.LabelField(rect, item.Material.name);
-                            break;
-                        case 1:
-                            EditorGUI.LabelField(rect, item.SubMeshCount.ToString());
-                            break;
-                        case 2:
-                            EditorGUI.LabelField(rect, item.Material.shader != null ? item.Material.shader.name : "");
-                            break;
-                        case 3:
-                            EditorGUI.LabelField(rect, item.Material.renderQueue.ToString());
-                            break;
-                        case 4:
-                            EditorGUI.LabelField(rect, item.Material.enableInstancing ? "On" : "Off");
-                            break;
-                        case 5:
-                            EditorGUI.LabelField(rect, GetStaticState(item));
-                            break;
-                        case 6:
-                            EditorGUI.LabelField(rect, item.Material.shaderKeywords.Length.ToString());
-                            break;
-                        case 7:
-                            EditorGUI.LabelField(rect, GetZWrite(item.Material));
-                            break;
-                        case 8:
-                            EditorGUI.LabelField(rect, GetCull(item.Material));
-                            break;
-                        case 9:
-                            EditorGUI.LabelField(rect, GetBlend(item.Material));
-                            break;
-                        case 10:
-                            EditorGUI.LabelField(rect, GetSRPBatching(item.Material));
-                            break;
-                    }
-                }
-            }
-
-            // 行選択が変更された際に呼び出される
-            protected override void SelectionChanged(IList<int> selectedIds)
-            {
-                if (selectedIds.Count > 0)
-                    OnSelectionChanged?.Invoke(items[selectedIds[0] - 1]);
-                else
-                    OnSelectionChanged?.Invoke(null);
-            }
-
-            // ダブルクリック時に対象のマテリアルをピン留めする
-            protected override void DoubleClickedItem(int id)
-            {
-                var info = items[id - 1];
-                EditorGUIUtility.PingObject(info.Material);
-                Selection.activeObject = info.Material;
-            }
-
-            // ヘッダークリックによるソート処理
-            protected void SortByMultipleColumns()
-            {
-                if (items.Count == 0)
-                    return;
-
-                var columns = header.state.sortedColumns;
-                Comparison<MaterialInfo> comparison = (a, b) => 0;
-                foreach (var col in columns)
-                {
-                    bool asc = header.IsSortedAscending(col);
-                    comparison = Combine(comparison, GetCompare(col, asc));
-                }
-                items.Sort(comparison);
-                Reload();
-            }
-
-            // 複数の比較処理を連結するユーティリティ
-            private static Comparison<MaterialInfo> Combine(Comparison<MaterialInfo> a, Comparison<MaterialInfo> b)
-            {
-                return (x, y) =>
-                {
-                    int res = a(x, y);
-                    return res != 0 ? res : b(x, y);
-                };
-            }
-
-            // 列ごとの比較関数を取得
-            private static Comparison<MaterialInfo> GetCompare(int column, bool asc)
-            {
-                int Sign(int r) => asc ? r : -r;
-                return column switch
-                {
-                    0 => (a, b) => Sign(string.Compare(a.Material.name, b.Material.name, StringComparison.OrdinalIgnoreCase)),
-                    1 => (a, b) => Sign(a.SubMeshCount.CompareTo(b.SubMeshCount)),
-                    2 => (a, b) => Sign(string.Compare(a.Material.shader?.name, b.Material.shader?.name, StringComparison.OrdinalIgnoreCase)),
-                    3 => (a, b) => Sign(a.Material.renderQueue.CompareTo(b.Material.renderQueue)),
-                    4 => (a, b) => Sign(a.Material.enableInstancing.CompareTo(b.Material.enableInstancing)),
-                    5 => (a, b) => Sign(string.Compare(GetStaticState(a), GetStaticState(b), StringComparison.Ordinal)),
-                    6 => (a, b) => Sign(a.Material.shaderKeywords.Length.CompareTo(b.Material.shaderKeywords.Length)),
-                    7 => (a, b) => Sign(string.Compare(GetZWrite(a.Material), GetZWrite(b.Material), StringComparison.Ordinal)),
-                    8 => (a, b) => Sign(string.Compare(GetCull(a.Material), GetCull(b.Material), StringComparison.Ordinal)),
-                    9 => (a, b) => Sign(string.Compare(GetBlend(a.Material), GetBlend(b.Material), StringComparison.Ordinal)),
-                    10 => (a, b) => Sign(string.Compare(GetSRPBatching(a.Material), GetSRPBatching(b.Material), StringComparison.Ordinal)),
-                    _ => (x, y) => 0
-                };
-            }
-        }
-
-        private MaterialTreeView treeView;
-        private MultiColumnHeader header;
-        private SearchField searchField;
-        private List<MaterialInfo> materials = new();
+        private readonly List<MaterialInfo> materials = new();
+        private MultiColumnListView listView;
+        private IMGUIContainer detailContainer;
         private MaterialInfo selected;
+        private int[] sortPriority;
+        private bool[] sortAscending;
 
         [MenuItem("Window/Scene Materials Viewer")]
-        // メニューからウィンドウを開く
         private static void Open()
         {
             GetWindow<SceneMaterialsWindow>("Scene Materials");
         }
 
-        // ウィンドウ有効化時に初期化を行う
         private void OnEnable()
         {
             Refresh();
+            BuildUI();
         }
 
-        // マテリアル情報を再収集し TreeView を再構築する
+        private void BuildUI()
+        {
+            rootVisualElement.Clear();
+
+            var toolbar = new IMGUIContainer(DrawToolbar);
+            rootVisualElement.Add(toolbar);
+
+            var sortGui = new IMGUIContainer(DrawSortGUI);
+            rootVisualElement.Add(sortGui);
+
+            var content = new VisualElement();
+            content.style.flexDirection = FlexDirection.Row;
+            content.style.flexGrow = 1f;
+
+            detailContainer = new IMGUIContainer(() => DrawDetailPane(detailContainer.contentRect));
+            detailContainer.style.width = DetailWidth;
+            detailContainer.style.flexShrink = 0f;
+            content.Add(detailContainer);
+
+            listView = CreateListView();
+            listView.style.flexGrow = 1f;
+            content.Add(listView);
+
+            rootVisualElement.Add(content);
+        }
+
+        private MultiColumnListView CreateListView()
+        {
+            var columns = new List<Column>();
+            for (int i = 0; i < ColumnNames.Length; ++i)
+            {
+                int index = i;
+                columns.Add(new Column
+                {
+                    title = ColumnNames[i],
+                    width = 100,
+                    makeCell = () => new Label(),
+                    bindCell = (e, row) =>
+                    {
+                        var info = materials[row];
+                        var label = (Label)e;
+                        switch (index)
+                        {
+                            case 0: label.text = info.Material.name; break;
+                            case 1: label.text = info.SubMeshCount.ToString(); break;
+                            case 2: label.text = info.Material.shader ? info.Material.shader.name : string.Empty; break;
+                            case 3: label.text = info.Material.renderQueue.ToString(); break;
+                            case 4: label.text = info.Material.enableInstancing ? "On" : "Off"; break;
+                            case 5: label.text = GetStaticState(info); break;
+                            case 6: label.text = info.Material.shaderKeywords.Length.ToString(); break;
+                            case 7: label.text = GetZWrite(info.Material); break;
+                            case 8: label.text = GetCull(info.Material); break;
+                            case 9: label.text = GetBlend(info.Material); break;
+                            case 10: label.text = GetSRPBatching(info.Material); break;
+                        }
+                    }
+                });
+            }
+
+            var lv = new MultiColumnListView(materials, columns.ToArray())
+            {
+                showAlternatingRowBackgrounds = AlternatingRowBackground.ContentOnly,
+                fixedItemHeight = EditorGUIUtility.singleLineHeight + 2f
+            };
+            lv.selectionChanged += objs =>
+            {
+                selected = objs.FirstOrDefault() as MaterialInfo;
+                detailContainer.MarkDirtyRepaint();
+            };
+            return lv;
+        }
+
         private void Refresh()
         {
             CollectMaterials();
-            var state = new TreeViewState();
-            header = new MultiColumnHeader(CreateHeaderState());
-            header.canSort = true;
-            treeView = new MaterialTreeView(state, header, materials);
-            // header.sortingChanged += treeView.OnSortingChanged;
-            treeView.OnSelectionChanged += info => selected = info;
-            searchField = new SearchField();
+            sortPriority = new int[ColumnNames.Length];
+            sortAscending = Enumerable.Repeat(true, ColumnNames.Length).ToArray();
+            if (listView != null)
+            {
+                listView.itemsSource = materials;
+                listView.Rebuild();
+            }
+            selected = null;
         }
 
-        // メインの描画処理
-        private void OnGUI()
+        private void DrawToolbar()
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
@@ -216,22 +143,37 @@ namespace Optim.MaterialViewer.Editor
                     Refresh();
                 }
                 GUILayout.FlexibleSpace();
-                treeView.searchString = searchField.OnToolbarGUI(treeView.searchString);
             }
-
-            Rect rect = new Rect(0, 20, position.width, position.height - 20);
-            float detailWidth = 250f;
-            Rect left = new Rect(rect.x, rect.y, detailWidth, rect.height);
-            Rect right = new Rect(rect.x + detailWidth, rect.y, rect.width - detailWidth, rect.height);
-
-            DrawDetailPane(left);
-            treeView.OnGUI(right);
         }
 
-        // 右側に表示する詳細ペインの描画
+        private void DrawSortGUI()
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            GUILayout.Label("Sort Settings (priority 1 is highest, 0 disables)");
+            for (int i = 0; i < ColumnNames.Length; ++i)
+            {
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Label(ColumnNames[i], GUILayout.Width(100));
+                int pri = EditorGUILayout.IntField(sortPriority[i], GUILayout.Width(30));
+                if (pri != sortPriority[i])
+                {
+                    sortPriority[i] = pri;
+                    ApplySort();
+                }
+                bool asc = EditorGUILayout.Toggle(sortAscending[i], GUILayout.Width(20));
+                if (asc != sortAscending[i])
+                {
+                    sortAscending[i] = asc;
+                    ApplySort();
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+            EditorGUILayout.EndVertical();
+        }
+
         private void DrawDetailPane(Rect rect)
         {
-            GUILayout.BeginArea(rect, EditorStyles.helpBox);
+            GUILayout.BeginArea(rect);
             if (selected != null)
             {
                 EditorGUILayout.LabelField(selected.Material.name, EditorStyles.boldLabel);
@@ -255,7 +197,51 @@ namespace Optim.MaterialViewer.Editor
             GUILayout.EndArea();
         }
 
-        // シーン内の全 Renderer からマテリアルを収集する
+        private void ApplySort()
+        {
+            var order = Enumerable.Range(0, ColumnNames.Length)
+                .Where(i => sortPriority[i] > 0)
+                .OrderBy(i => sortPriority[i]);
+
+            Comparison<MaterialInfo> cmp = (a, b) => 0;
+            foreach (var col in order)
+            {
+                bool asc = sortAscending[col];
+                cmp = Combine(cmp, GetCompare(col, asc));
+            }
+            materials.Sort(cmp);
+            listView.Rebuild();
+        }
+
+        private static Comparison<MaterialInfo> Combine(Comparison<MaterialInfo> a, Comparison<MaterialInfo> b)
+        {
+            return (x, y) =>
+            {
+                int r = a(x, y);
+                return r != 0 ? r : b(x, y);
+            };
+        }
+
+        private static Comparison<MaterialInfo> GetCompare(int column, bool asc)
+        {
+            int Sign(int r) => asc ? r : -r;
+            return column switch
+            {
+                0 => (a, b) => Sign(string.Compare(a.Material.name, b.Material.name, StringComparison.OrdinalIgnoreCase)),
+                1 => (a, b) => Sign(a.SubMeshCount.CompareTo(b.SubMeshCount)),
+                2 => (a, b) => Sign(string.Compare(a.Material.shader?.name, b.Material.shader?.name, StringComparison.OrdinalIgnoreCase)),
+                3 => (a, b) => Sign(a.Material.renderQueue.CompareTo(b.Material.renderQueue)),
+                4 => (a, b) => Sign(a.Material.enableInstancing.CompareTo(b.Material.enableInstancing)),
+                5 => (a, b) => Sign(string.Compare(GetStaticState(a), GetStaticState(b), StringComparison.Ordinal)),
+                6 => (a, b) => Sign(a.Material.shaderKeywords.Length.CompareTo(b.Material.shaderKeywords.Length)),
+                7 => (a, b) => Sign(string.Compare(GetZWrite(a.Material), GetZWrite(b.Material), StringComparison.Ordinal)),
+                8 => (a, b) => Sign(string.Compare(GetCull(a.Material), GetCull(b.Material), StringComparison.Ordinal)),
+                9 => (a, b) => Sign(string.Compare(GetBlend(a.Material), GetBlend(b.Material), StringComparison.Ordinal)),
+                10 => (a, b) => Sign(string.Compare(GetSRPBatching(a.Material), GetSRPBatching(b.Material), StringComparison.Ordinal)),
+                _ => (x, y) => 0
+            };
+        }
+
         private void CollectMaterials()
         {
             materials.Clear();
@@ -283,35 +269,13 @@ namespace Optim.MaterialViewer.Editor
             materials.AddRange(dict.Values);
         }
 
-        // TreeView のヘッダー定義を作成
-        private static MultiColumnHeaderState CreateHeaderState()
-        {
-            var columns = new[]
-            {
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("Name"), width = 150, minWidth = 100, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("SubMeshes"), width = 70, minWidth = 50, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("Shader"), width = 150, minWidth = 100, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("Queue"), width = 60, minWidth = 50, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("Instancing"), width = 70, minWidth = 60, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("Static"), width = 60, minWidth = 50, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("Keywords"), width = 70, minWidth = 60, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("ZWrite"), width = 60, minWidth = 50, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("Cull"), width = 60, minWidth = 50, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("Blend"), width = 80, minWidth = 60, allowToggleVisibility = true},
-                new MultiColumnHeaderState.Column {headerContent = new GUIContent("SRP"), width = 60, minWidth = 50, allowToggleVisibility = true}
-            };
-            return new MultiColumnHeaderState(columns);
-        }
-
-        // ZWrite 設定を取得
         private static string GetZWrite(Material mat)
         {
             if (mat.HasProperty("_ZWrite"))
                 return mat.GetInt("_ZWrite") != 0 ? "On" : "Off";
-            return "";
+            return string.Empty;
         }
 
-        // カリングモードを取得
         private static string GetCull(Material mat)
         {
             if (mat.HasProperty("_Cull"))
@@ -319,10 +283,9 @@ namespace Optim.MaterialViewer.Editor
                 int c = mat.GetInt("_Cull");
                 return ((UnityEngine.Rendering.CullMode)c).ToString();
             }
-            return "";
+            return string.Empty;
         }
 
-        // ブレンドモードを取得
         private static string GetBlend(Material mat)
         {
             if (mat.HasProperty("_SrcBlend") && mat.HasProperty("_DstBlend"))
@@ -331,23 +294,18 @@ namespace Optim.MaterialViewer.Editor
                 var dst = (UnityEngine.Rendering.BlendMode)mat.GetInt("_DstBlend");
                 return $"{src}/{dst}";
             }
-            return "";
+            return string.Empty;
         }
 
-        // SRP Batching の互換性を確認
         private static string GetSRPBatching(Material mat)
         {
 #if UNITY_EDITOR
             return "-";
-            // シェーダーが SRP Batcher に対応しているかを確認するコードが分からないので保留
-            // var code = UnityEditor.Rendering.ShaderUtil.GetSRPBatcherCompatibilityCode(mat.shader);
-            // return code == UnityEditor.Rendering.ShaderUtil.SRPBatcherCompatibilityCode.SRPBatcherCompatible ? "Compatible" : "Not";
 #else
-            return "";
+            return string.Empty;
 #endif
         }
 
-        // 静的・動的の使用状況を文字列化
         private static string GetStaticState(MaterialInfo info)
         {
             if (info.UsedStatic && info.UsedDynamic)
