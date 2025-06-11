@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UIElements;
 
 namespace Optim.MaterialViewer.Editor
@@ -22,6 +24,28 @@ namespace Optim.MaterialViewer.Editor
             public bool UsedDynamic;
         }
 
+        enum SortType
+        {
+            Ascending,
+            Descending
+        }
+
+        class SortSettingRowListData : ScriptableObject
+        {
+            public string[] columnName;
+            public int[] priority;
+            public bool[] enabled;
+            public SortType[] ascending;
+
+            public void Set(string[] columnName, int[] priority, bool[] enabled, SortType[] ascending)
+            {
+                this.columnName = columnName;
+                this.priority = priority;
+                this.enabled = enabled;
+                this.ascending = ascending;
+            }
+        }
+
         private static readonly string[] ColumnNames =
         {
             "Name", "SubMeshes", "Shader", "Queue", "Instancing", "Static",
@@ -34,8 +58,7 @@ namespace Optim.MaterialViewer.Editor
         private MultiColumnListView listView;
         private IMGUIContainer detailContainer;
         private MaterialInfo selected;
-        private int[] sortPriority;
-        private bool[] sortAscending;
+        private SortSettingRowListData sortSettings;
 
         [MenuItem("Window/Scene Materials Viewer")]
         private static void Open()
@@ -130,8 +153,13 @@ namespace Optim.MaterialViewer.Editor
         private void Refresh()
         {
             CollectMaterials();
-            sortPriority = new int[ColumnNames.Length];
-            sortAscending = Enumerable.Repeat(true, ColumnNames.Length).ToArray();
+            sortSettings = CreateInstance<SortSettingRowListData>();
+            sortSettings.Set(
+                ColumnNames,
+                new int[ColumnNames.Length],
+                Enumerable.Repeat(true, ColumnNames.Length).ToArray(),
+                Enumerable.Repeat(SortType.Ascending, ColumnNames.Length).ToArray());
+            
             if (listView != null)
             {
                 listView.itemsSource = materials;
@@ -150,6 +178,8 @@ namespace Optim.MaterialViewer.Editor
             }
         }
 
+        
+        
         private VisualElement CreateSortSettingsGUI()
         {
             var container = new VisualElement();
@@ -160,45 +190,72 @@ namespace Optim.MaterialViewer.Editor
             var label = new Label("Multi Column Sort Settings");
             label.style.unityFontStyleAndWeight = FontStyle.Bold;
             container.Add(label);
-
-            for (int i = 0; i < ColumnNames.Length; ++i)
+            
+            // Debug.Log($"Creating ListView with {rows.Count} rows");
+            var listView = new ListView(ColumnNames, 20, () => new VisualElement(), (e, i) =>
             {
-                var row = new VisualElement();
+                var row = e;
+                row.Clear();
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.alignItems = Align.Center;
 
                 // ソートの有効/無効
                 var toggleToEnable = new Toggle();
                 toggleToEnable.style.width = 20;
-                toggleToEnable.value = sortAscending[i];
-                
+                toggleToEnable.value = sortSettings.enabled[i];
+
                 toggleToEnable.RegisterValueChangedCallback(evt =>
                 {
-                    sortAscending[i] = evt.newValue;
+                    sortSettings.enabled[i] = evt.newValue;
                     ApplySort();
                 });
                 row.Add(toggleToEnable);
 
+                // カラム名
                 var columnLabel = new Label(ColumnNames[i]);
                 columnLabel.style.width = 100;
                 row.Add(columnLabel);
 
                 // ソートの優先度
                 var priorityField = new IntegerField();
-                priorityField.value = sortPriority[i];
+                priorityField.value = sortSettings.priority[i];
                 priorityField.style.width = 30;
                 
-                var i1 = i;
                 priorityField.RegisterValueChangedCallback(evt =>
                 {
-                    sortPriority[i1] = evt.newValue;;
+                    sortSettings.priority[i] = evt.newValue;
                     ApplySort();
                 });
                 row.Add(priorityField);
-
-                container.Add(row);
-            }
-
+                
+                // ソートの種類
+                var sortType = new PopupField<SortType>(
+                    "",
+                    new List<SortType> {SortType.Ascending, SortType.Descending},
+                    sortSettings.ascending[i]);
+                sortType.style.width = 100;
+                sortType.RegisterValueChangedCallback(evt =>
+                {
+                    sortSettings.ascending[i] = evt.newValue;
+                    ApplySort();
+                });
+                row.Add(sortType);
+            })
+            {
+                style =
+                {
+                    flexGrow = 1f,
+                    flexShrink = 0f,
+                    height = 100f
+                }
+            };
+            var so = new SerializedObject(sortSettings);
+            listView.Bind(so);
+            
+            listView.reorderable = true;
+            listView.showBorder = true;
+            listView.showAlternatingRowBackgrounds = AlternatingRowBackground.ContentOnly;
+            container.Add(listView);
             return container;
         }
 
@@ -231,14 +288,14 @@ namespace Optim.MaterialViewer.Editor
         private void ApplySort()
         {
             var order = Enumerable.Range(0, ColumnNames.Length)
-                .Where(i => sortPriority[i] > 0)
-                .OrderBy(i => sortPriority[i]);
+                .Where(i => sortSettings.priority[i] > 0)
+                .OrderBy(i => sortSettings.priority[i]);
 
             Comparison<MaterialInfo> cmp = (a, b) => 0;
             foreach (var col in order)
             {
-                bool asc = sortAscending[col];
-                cmp = Combine(cmp, GetCompare(col, asc));
+                var asc = sortSettings.ascending[col];
+                cmp = Combine(cmp, GetCompare(col, asc == SortType.Ascending));
             }
             materials.Sort(cmp);
             listView.Rebuild();
