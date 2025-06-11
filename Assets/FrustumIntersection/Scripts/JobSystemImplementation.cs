@@ -34,7 +34,7 @@ namespace Optim.FrustumIntersection
                 Vector3 v0 = Vertices[Indices[i]];
                 Vector3 v1 = Vertices[Indices[i + 1]];
                 Vector3 v2 = Vertices[Indices[i + 2]];
-                if (Checker.Intersects(v0, v1, v2, Planes.ToArray()))
+                if (Checker.Intersects(v0, v1, v2, Planes))
                 {
                     if (Collect)
                         Results.AddNoResize(index);

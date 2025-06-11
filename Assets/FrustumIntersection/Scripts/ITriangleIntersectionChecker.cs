@@ -1,4 +1,5 @@
 using UnityEngine;
+using Unity.Collections;
 
 namespace Optim.FrustumIntersection
 {
@@ -14,6 +15,6 @@ namespace Optim.FrustumIntersection
         /// <param name="v1">Triangle vertex 1.</param>
         /// <param name="v2">Triangle vertex 2.</param>
         /// <param name="planes">Frustum planes.</param>
-        bool Intersects(Vector3 v0, Vector3 v1, Vector3 v2, Plane[] planes);
+        bool Intersects(Vector3 v0, Vector3 v1, Vector3 v2, NativeArray<Plane> planes);
     }
 }
