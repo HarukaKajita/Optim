@@ -56,21 +56,23 @@ namespace Optim.MaterialViewer.Editor
             var toolbar = new IMGUIContainer(DrawToolbar);
             rootVisualElement.Add(toolbar);
 
-            var sortGui = new IMGUIContainer(DrawSortGUI);
-            rootVisualElement.Add(sortGui);
-
             var content = new VisualElement();
             content.style.flexDirection = FlexDirection.Row;
             content.style.flexGrow = 1f;
 
+            // マルチカラムを組み合わせたソートを制御する為の GUI
+            content.Add(CreateSortSettingsGUI());
+            
+            // ListView
+            listView = CreateListView();
+            listView.style.flexGrow = 1f;
+            content.Add(listView);
+            
+            // Detail pane
             detailContainer = new IMGUIContainer(() => DrawDetailPane(detailContainer.contentRect));
             detailContainer.style.width = DetailWidth;
             detailContainer.style.flexShrink = 0f;
             content.Add(detailContainer);
-
-            listView = CreateListView();
-            listView.style.flexGrow = 1f;
-            content.Add(listView);
 
             rootVisualElement.Add(content);
         }
@@ -148,29 +150,56 @@ namespace Optim.MaterialViewer.Editor
             }
         }
 
-        private void DrawSortGUI()
+        private VisualElement CreateSortSettingsGUI()
         {
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            GUILayout.Label("Sort Settings (priority 1 is highest, 0 disables)");
+            var container = new VisualElement();
+            container.style.flexDirection = FlexDirection.Column;
+            container.style.paddingLeft = 5f;
+            container.style.paddingRight = 5f;
+
+            var label = new Label("Multi Column Sort Settings");
+            label.style.unityFontStyleAndWeight = FontStyle.Bold;
+            container.Add(label);
+
             for (int i = 0; i < ColumnNames.Length; ++i)
             {
-                EditorGUILayout.BeginHorizontal();
-                GUILayout.Label(ColumnNames[i], GUILayout.Width(100));
-                int pri = EditorGUILayout.IntField(sortPriority[i], GUILayout.Width(30));
-                if (pri != sortPriority[i])
+                var row = new VisualElement();
+                row.style.flexDirection = FlexDirection.Row;
+                row.style.alignItems = Align.Center;
+
+                // ソートの有効/無効
+                var toggleToEnable = new Toggle();
+                toggleToEnable.style.width = 20;
+                toggleToEnable.value = sortAscending[i];
+                
+                toggleToEnable.RegisterValueChangedCallback(evt =>
                 {
-                    sortPriority[i] = pri;
+                    sortAscending[i] = evt.newValue;
                     ApplySort();
-                }
-                bool asc = EditorGUILayout.Toggle(sortAscending[i], GUILayout.Width(20));
-                if (asc != sortAscending[i])
+                });
+                row.Add(toggleToEnable);
+
+                var columnLabel = new Label(ColumnNames[i]);
+                columnLabel.style.width = 100;
+                row.Add(columnLabel);
+
+                // ソートの優先度
+                var priorityField = new IntegerField();
+                priorityField.value = sortPriority[i];
+                priorityField.style.width = 30;
+                
+                var i1 = i;
+                priorityField.RegisterValueChangedCallback(evt =>
                 {
-                    sortAscending[i] = asc;
+                    sortPriority[i1] = evt.newValue;;
                     ApplySort();
-                }
-                EditorGUILayout.EndHorizontal();
+                });
+                row.Add(priorityField);
+
+                container.Add(row);
             }
-            EditorGUILayout.EndVertical();
+
+            return container;
         }
 
         private void DrawDetailPane(Rect rect)
