@@ -77,7 +77,7 @@ namespace Optim.MaterialViewer.Editor
 
         private MultiColumnListView CreateListView()
         {
-            var columns = new List<Column>();
+            var columns = new Columns();
             for (int i = 0; i < ColumnNames.Length; ++i)
             {
                 int index = i;
@@ -108,10 +108,14 @@ namespace Optim.MaterialViewer.Editor
                 });
             }
 
-            var lv = new MultiColumnListView(materials, columns.ToArray())
+            var lv = new MultiColumnListView(columns)
             {
+                itemsSource = materials,
+                showBorder = true,
+                reorderable = true,
+                selectionType = SelectionType.Single,
+                fixedItemHeight = EditorGUIUtility.singleLineHeight + 2f,
                 showAlternatingRowBackgrounds = AlternatingRowBackground.ContentOnly,
-                fixedItemHeight = EditorGUIUtility.singleLineHeight + 2f
             };
             lv.selectionChanged += objs =>
             {
@@ -139,9 +143,7 @@ namespace Optim.MaterialViewer.Editor
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
                 if (GUILayout.Button("Refresh", EditorStyles.toolbarButton))
-                {
                     Refresh();
-                }
                 GUILayout.FlexibleSpace();
             }
         }
