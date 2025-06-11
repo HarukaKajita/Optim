@@ -23,8 +23,7 @@ namespace Optim.FrustumIntersection
             [ReadOnly] public NativeArray<Vector3> Vertices;
             [ReadOnly] public NativeArray<int> Indices;
             [ReadOnly] public NativeArray<Plane> Planes;
-            [WriteOnly] public NativeList<int>.ParallelWriter Results;
-            public bool Collect;
+            [WriteOnly] public NativeArray<int> Results;
 
             public ITriangleIntersectionChecker Checker;
 
@@ -34,11 +33,8 @@ namespace Optim.FrustumIntersection
                 Vector3 v0 = Vertices[Indices[i]];
                 Vector3 v1 = Vertices[Indices[i + 1]];
                 Vector3 v2 = Vertices[Indices[i + 2]];
-                if (Checker.Intersects(v0, v1, v2, Planes))
-                {
-                    if (Collect)
-                        Results.AddNoResize(index);
-                }
+                bool inside = Checker.Intersects(v0, v1, v2, Planes);
+                Results[index] = inside ? 1 : 0;
             }
         }
 
@@ -58,22 +54,23 @@ namespace Optim.FrustumIntersection
             var indices = new NativeArray<int>(mesh.triangles, Allocator.TempJob);
             var jobPlanes = new NativeArray<Plane>(planes, Allocator.TempJob);
 
-            var results = new NativeList<int>(Allocator.TempJob);
+            int triCount = mesh.triangles.Length / 3;
+            var results = new NativeArray<int>(triCount, Allocator.TempJob);
             var job = new IntersectJob
             {
                 Vertices = vertices,
                 Indices = indices,
                 Planes = jobPlanes,
-                Results = results.AsParallelWriter(),
-                Collect = options.CollectIndices,
+                Results = results,
                 Checker = checker
             };
 
-            JobHandle handle = job.Schedule(mesh.triangles.Length / 3, 64);
+            JobHandle handle = job.Schedule(triCount, 64);
             handle.Complete();
 
-            if (options.CollectIndices)
-                result.IntersectedIndices.AddRange(results.AsArray().ToArray());
+            result.Intersections = new bool[triCount];
+            for (int i = 0; i < triCount; ++i)
+                result.Intersections[i] = results[i] != 0;
 
             results.Dispose();
             vertices.Dispose();

@@ -30,23 +30,16 @@ namespace Optim.FrustumIntersection
 
             var vertices = mesh.vertices;
             var indices = mesh.triangles;
+            int triCount = indices.Length / 3;
+            result.Intersections = new bool[triCount];
             var nativePlanes = new NativeArray<Plane>(planes, Allocator.Temp);
             for (int i = 0; i < indices.Length; i += 3)
             {
                 Vector3 v0 = vertices[indices[i]];
                 Vector3 v1 = vertices[indices[i + 1]];
                 Vector3 v2 = vertices[indices[i + 2]];
-                if (checker.Intersects(v0, v1, v2, nativePlanes))
-                {
-                    if (options.CollectIndices)
-                    {
-                        result.IntersectedIndices.Add(i / 3);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
+                bool inside = checker.Intersects(v0, v1, v2, nativePlanes);
+                result.Intersections[i / 3] = inside;
             }
 
             nativePlanes.Dispose();
