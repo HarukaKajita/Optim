@@ -21,6 +21,30 @@ namespace Optim.BVH
         public float BuildTimeSeconds => buildTimeSeconds;
 
         /// <summary>
+        /// ルートから始まるノードを前順で列挙します。
+        /// </summary>
+        public IEnumerable<BVHNode> Traverse(BVHNode node = null)
+        {
+            if (node == null)
+                node = root;
+            if (node == null)
+                yield break;
+
+            var stack = new Stack<BVHNode>();
+            stack.Push(node);
+            while (stack.Count > 0)
+            {
+                var n = stack.Pop();
+                yield return n;
+                if (!n.IsLeaf)
+                {
+                    if (n.Right != null) stack.Push(n.Right);
+                    if (n.Left != null) stack.Push(n.Left);
+                }
+            }
+        }
+
+        /// <summary>
         /// 現在のシーンに存在するすべての Renderer から BVH を構築します。
         /// </summary>
         public void BuildFromScene(int leafSize = 4)
