@@ -271,7 +271,8 @@ namespace Optim.MaterialViewer.Editor
             };
             detailContainer.Add(nameLabel);
 
-            detailContainer.Add(new Label("Used By:"));
+            var usedByContainer = new VisualElement();
+            usedByContainer.Add(new Label("Used By:"));
             foreach (var r in selected.Renderers)
             {
                 var field = new ObjectField(r.gameObject.name)
