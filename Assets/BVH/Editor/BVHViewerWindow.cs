@@ -60,10 +60,10 @@ namespace Optim.BVH.Editor
         private void DrawNode(BVHNode node, int depth)
         {
             if (node == null) return;
+            bool expanded = false;
             using (new EditorGUILayout.HorizontalScope())
             {
                 GUILayout.Space(depth * 16);
-                bool expanded = false;
                 if (!node.IsLeaf)
                 {
                     foldouts.TryGetValue(node, out expanded);
