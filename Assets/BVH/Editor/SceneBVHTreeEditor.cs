@@ -14,6 +14,13 @@ namespace Optim.BVH.Editor
         {
             base.OnInspectorGUI();
 
+            if (GUILayout.Button("Build BVH"))
+            {
+                var tree = (SceneBVHTree)target;
+                tree.Build();
+                EditorUtility.SetDirty(tree);
+            }
+
             if (GUILayout.Button("Open BVH Viewer"))
             {
                 BVHViewerWindow.Open((SceneBVHTree)target);

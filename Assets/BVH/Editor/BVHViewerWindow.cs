@@ -1,18 +1,18 @@
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 using UnityEngine;
-using Optim.BVH;
 
 namespace Optim.BVH.Editor
 {
     /// <summary>
-    /// BVH の構造をツリービューで表示し、シーン上にバウンズを描画するウィンドウ。
+    /// BVH 構造を UIElements の TreeView で表示し、シーン上に境界を描画するエディタウィンドウ。
     /// </summary>
     internal class BVHViewerWindow : EditorWindow
     {
         private SceneBVHTree targetTree;
-        private Vector2 scroll;
-        private readonly Dictionary<BVHNode, bool> foldouts = new();
+        private TreeView treeView;
 
         [MenuItem("Window/BVH Viewer")]
         private static void OpenFromMenu()
@@ -26,9 +26,21 @@ namespace Optim.BVH.Editor
             GetWindow<BVHViewerWindow>("BVH Viewer").SetTarget(tree);
         }
 
+        public void CreateGUI()
+        {
+            treeView = new TreeView
+            {
+                makeItem = () => new Label(),
+                bindItem = BindItem
+            };
+            rootVisualElement.Add(treeView);
+            RefreshTree();
+        }
+
         private void OnEnable()
         {
             BVHGizmoDrawer.ActiveTree = targetTree;
+            RefreshTree();
         }
 
         private void OnDisable()
@@ -41,44 +53,49 @@ namespace Optim.BVH.Editor
         {
             targetTree = tree;
             BVHGizmoDrawer.ActiveTree = tree;
-            Repaint();
+            RefreshTree();
         }
 
-        private void OnGUI()
+        private void RefreshTree()
         {
+            if (treeView == null)
+                return;
+
             if (targetTree == null || targetTree.Tree.Root == null)
             {
-                EditorGUILayout.HelpBox("SceneBVHTree を選択してください", MessageType.Info);
+                treeView.SetRootItems(new List<TreeViewItemData<BVHNode>>());
                 return;
             }
 
-            scroll = EditorGUILayout.BeginScrollView(scroll);
-            DrawNode(targetTree.Tree.Root, 0);
-            EditorGUILayout.EndScrollView();
+            int id = 0;
+            var rootItem = BuildItem(targetTree.Tree.Root, ref id);
+            treeView.SetRootItems(new List<TreeViewItemData<BVHNode>> { rootItem });
+            treeView.Rebuild();
         }
 
-        private void DrawNode(BVHNode node, int depth)
+        private static TreeViewItemData<BVHNode> BuildItem(BVHNode node, ref int id)
         {
-            if (node == null) return;
-            bool expanded = false;
-            using (new EditorGUILayout.HorizontalScope())
+            int currentId = id++;
+            if (node.IsLeaf)
             {
-                GUILayout.Space(depth * 16);
-                if (!node.IsLeaf)
-                {
-                    foldouts.TryGetValue(node, out expanded);
-                    expanded = EditorGUILayout.Foldout(expanded, $"Node {node.Bounds.center}", true);
-                    foldouts[node] = expanded;
-                }
-                else
-                {
-                    GUILayout.Label($"Leaf ({node.Renderers.Count}) {node.Bounds.center}");
-                }
+                return new TreeViewItemData<BVHNode>(currentId, node);
             }
-            if (expanded)
+
+            var children = new List<TreeViewItemData<BVHNode>>();
+            if (node.Left != null)
+                children.Add(BuildItem(node.Left, ref id));
+            if (node.Right != null)
+                children.Add(BuildItem(node.Right, ref id));
+            return new TreeViewItemData<BVHNode>(currentId, node, children);
+        }
+
+        private void BindItem(VisualElement element, int index)
+        {
+            if (treeView.GetItemDataForIndex<BVHNode>(index) is BVHNode node)
             {
-                DrawNode(node.Left, depth + 1);
-                DrawNode(node.Right, depth + 1);
+                ((Label)element).text = node.IsLeaf
+                    ? $"Leaf ({node.Renderers.Count}) {node.Bounds.center}"
+                    : $"Node {node.Bounds.center}";
             }
         }
     }
