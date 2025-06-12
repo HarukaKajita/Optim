@@ -282,7 +282,7 @@ namespace Optim.MaterialViewer.Editor
                     value = r
                 };
                 field.SetEnabled(false);
-                detailContainer.Add(field);
+                usedByContainer.Add(field);
             }
 
             detailContainer.Add(new Label("Keywords:"));
