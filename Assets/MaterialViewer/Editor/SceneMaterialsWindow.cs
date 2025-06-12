@@ -168,8 +168,7 @@ namespace Optim.MaterialViewer.Editor
                 listView.Rebuild();
             }
             selected = null;
-            if (detailContainer != null)
-                UpdateDetailPane();
+            UpdateDetailPane();
         }
 
         private void DrawToolbar()
