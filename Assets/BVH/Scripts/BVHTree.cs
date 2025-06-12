@@ -7,12 +7,18 @@ namespace Optim.BVH
     /// <summary>
     /// SAH (Surface Area Heuristic) を利用して BVH を構築するユーティリティクラス。
     /// </summary>
+    [System.Serializable]
     public class BVHTree
     {
         /// <summary>構築された BVH のルートノード。</summary>
-        public BVHNode Root { get; private set; }
+        [SerializeField, HideInInspector]
+        private BVHNode root;
         /// <summary>BVH 構築に要した時間 (秒)。</summary>
-        public float BuildTimeSeconds { get; private set; }
+        [SerializeField, HideInInspector]
+        private float buildTimeSeconds;
+
+        public BVHNode Root => root;
+        public float BuildTimeSeconds => buildTimeSeconds;
 
         /// <summary>
         /// 現在のシーンに存在するすべての Renderer から BVH を構築します。
@@ -29,8 +35,8 @@ namespace Optim.BVH
         {
             if (renderers == null || renderers.Count == 0)
             {
-                Root = null;
-                BuildTimeSeconds = 0f;
+                root = null;
+                buildTimeSeconds = 0f;
                 return;
             }
 
@@ -47,9 +53,9 @@ namespace Optim.BVH
 
             // 処理時間を計測しながら再帰的に BVH を構築
             var watch = Stopwatch.StartNew();
-            Root = BuildRecursive(list, leafSize);
+            root = BuildRecursive(list, leafSize);
             watch.Stop();
-            BuildTimeSeconds = watch.ElapsedMilliseconds / 1000f;
+            buildTimeSeconds = watch.ElapsedMilliseconds / 1000f;
         }
 
         /// <summary>

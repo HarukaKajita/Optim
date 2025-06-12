@@ -6,6 +6,7 @@ namespace Optim.BVH
     /// <summary>
     /// Bounding Volume Hierarchy のノードを表します。
     /// </summary>
+    [System.Serializable]
     public class BVHNode
     {
         /// <summary>このノード全体を包む境界ボックス。</summary>
