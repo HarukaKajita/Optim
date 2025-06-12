@@ -272,6 +272,7 @@ namespace Optim.MaterialViewer.Editor
             detailContainer.Add(nameLabel);
 
             var usedByContainer = new VisualElement();
+            detailContainer.Add(usedByContainer); // Add usedByContainer to detailContainer
             usedByContainer.Add(new Label("Used By:"));
             foreach (var r in selected.Renderers)
             {
