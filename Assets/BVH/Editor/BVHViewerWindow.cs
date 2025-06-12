@@ -30,11 +30,23 @@ namespace Optim.BVH.Editor
         {
             treeView = new TreeView
             {
-                makeItem = () => new Label(),
+                makeItem = MakeItem,
                 bindItem = BindItem
             };
             rootVisualElement.Add(treeView);
             RefreshTree();
+        }
+
+        /// <summary>
+        /// ツリービューの各行に表示する Label を生成します。
+        /// テキストが垂直方向の中央に配置されるようにスタイルを調整します。
+        /// </summary>
+        private VisualElement MakeItem()
+        {
+            var label = new Label();
+            label.style.unityTextAlign = TextAnchor.MiddleLeft;
+            label.style.alignSelf = Align.Center;
+            return label;
         }
 
         private void OnEnable()
