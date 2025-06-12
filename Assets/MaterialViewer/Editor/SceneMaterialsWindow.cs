@@ -56,7 +56,7 @@ namespace Optim.MaterialViewer.Editor
 
         private readonly List<MaterialInfo> materials = new();
         private MultiColumnListView listView;
-        private IMGUIContainer detailContainer;
+        private ScrollView detailContainer;
         private MaterialInfo selected;
         private SortSettingRowListData sortSettings;
 
@@ -92,10 +92,12 @@ namespace Optim.MaterialViewer.Editor
             content.Add(listView);
             
             // Detail pane
-            detailContainer = new IMGUIContainer(() => DrawDetailPane(detailContainer.contentRect));
+            detailContainer = new ScrollView();
             detailContainer.style.width = DetailWidth;
             detailContainer.style.flexShrink = 0f;
             content.Add(detailContainer);
+
+            UpdateDetailPane();
 
             rootVisualElement.Add(content);
         }
@@ -145,7 +147,7 @@ namespace Optim.MaterialViewer.Editor
             lv.selectionChanged += objs =>
             {
                 selected = objs.FirstOrDefault() as MaterialInfo;
-                detailContainer.MarkDirtyRepaint();
+                UpdateDetailPane();
             };
             return lv;
         }
@@ -166,6 +168,7 @@ namespace Optim.MaterialViewer.Editor
                 listView.Rebuild();
             }
             selected = null;
+            UpdateDetailPane();
         }
 
         private void DrawToolbar()
@@ -252,28 +255,39 @@ namespace Optim.MaterialViewer.Editor
             return container;
         }
 
-        private void DrawDetailPane(Rect rect)
+        private void UpdateDetailPane()
         {
-            GUILayout.BeginArea(rect);
-            if (selected != null)
+            detailContainer.Clear();
+
+            if (selected == null)
             {
-                EditorGUILayout.LabelField(selected.Material.name, EditorStyles.boldLabel);
-                // 使用しているレンダラー
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Used By:");
-                foreach (var r in selected.Renderers)
-                    EditorGUILayout.ObjectField(r.gameObject.name, r, typeof(Renderer), true);
-                // キーワード
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Keywords:");
-                foreach (var kw in selected.Material.shaderKeywords.OrderBy(k => k))
-                    EditorGUILayout.LabelField(kw);
+                detailContainer.Add(new Label("No material selected"));
+                return;
             }
-            else
+
+            var nameLabel = new Label(selected.Material.name)
             {
-                GUILayout.Label("No material selected");
+                style = { unityFontStyleAndWeight = FontStyle.Bold }
+            };
+            detailContainer.Add(nameLabel);
+
+            var usedByContainer = new VisualElement();
+            detailContainer.Add(usedByContainer); // Add usedByContainer to detailContainer
+            usedByContainer.Add(new Label("Used By:"));
+            foreach (var r in selected.Renderers)
+            {
+                var field = new ObjectField(r.gameObject.name)
+                {
+                    objectType = typeof(Renderer),
+                    value = r
+                };
+                field.SetEnabled(false);
+                usedByContainer.Add(field);
             }
-            GUILayout.EndArea();
+
+            detailContainer.Add(new Label("Keywords:"));
+            foreach (var kw in selected.Material.shaderKeywords.OrderBy(k => k))
+                detailContainer.Add(new Label(kw));
         }
 
         private void ApplySort()
