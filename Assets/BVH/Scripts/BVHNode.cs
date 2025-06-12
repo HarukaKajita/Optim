@@ -4,20 +4,20 @@ using UnityEngine;
 namespace Optim.BVH
 {
     /// <summary>
-    /// Node of a bounding volume hierarchy.
+    /// Bounding Volume Hierarchy のノードを表します。
     /// </summary>
     public class BVHNode
     {
-        /// <summary>Bounds covering this node.</summary>
+        /// <summary>このノード全体を包む境界ボックス。</summary>
         public Bounds Bounds;
-        /// <summary>Child node containing primitives on the left side.</summary>
+        /// <summary>左側のオブジェクトを保持する子ノード。</summary>
         public BVHNode Left;
-        /// <summary>Child node containing primitives on the right side.</summary>
+        /// <summary>右側のオブジェクトを保持する子ノード。</summary>
         public BVHNode Right;
-        /// <summary>Renderers contained in this leaf. Null if this node is internal.</summary>
+        /// <summary>葉ノードの場合に保持する Renderer リスト。内部ノードの場合は <c>null</c>。</summary>
         public List<Renderer> Renderers;
 
-        /// <summary>Returns true if this node is a leaf node.</summary>
+        /// <summary>葉ノードであるかどうか。</summary>
         public bool IsLeaf => Renderers != null;
     }
 }

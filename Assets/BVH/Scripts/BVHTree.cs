@@ -5,15 +5,17 @@ using UnityEngine;
 namespace Optim.BVH
 {
     /// <summary>
-    /// Utility class that builds a BVH from scene renderers using SAH.
+    /// SAH (Surface Area Heuristic) を利用して BVH を構築するユーティリティクラス。
     /// </summary>
     public class BVHTree
     {
+        /// <summary>構築された BVH のルートノード。</summary>
         public BVHNode Root { get; private set; }
+        /// <summary>BVH 構築に要した時間 (秒)。</summary>
         public float BuildTimeSeconds { get; private set; }
 
         /// <summary>
-        /// Build a BVH from all renderers in the current scene.
+        /// 現在のシーンに存在するすべての Renderer から BVH を構築します。
         /// </summary>
         public void BuildFromScene(int leafSize = 4)
         {
@@ -21,7 +23,7 @@ namespace Optim.BVH
         }
 
         /// <summary>
-        /// Build a BVH from a set of renderers.
+        /// 渡された Renderer 群から BVH を構築します。
         /// </summary>
         public void Build(IReadOnlyList<Renderer> renderers, int leafSize = 4)
         {
@@ -32,28 +34,44 @@ namespace Optim.BVH
                 return;
             }
 
+            // 各 Renderer の AABB を事前に取得しておく
             var list = new List<RendererBounds>(renderers.Count);
             foreach (var r in renderers)
-                list.Add(new RendererBounds { Renderer = r, Bounds = r.bounds });
+            {
+                list.Add(new RendererBounds
+                {
+                    Renderer = r,
+                    Bounds = r.bounds
+                });
+            }
 
+            // 処理時間を計測しながら再帰的に BVH を構築
             var watch = Stopwatch.StartNew();
             Root = BuildRecursive(list, leafSize);
             watch.Stop();
             BuildTimeSeconds = watch.ElapsedMilliseconds / 1000f;
         }
 
+        /// <summary>
+        /// Renderer とその境界ボックスのセット。
+        /// </summary>
         private struct RendererBounds
         {
             public Renderer Renderer;
             public Bounds Bounds;
         }
 
+        /// <summary>
+        /// 再帰的に BVH ノードを構築します。
+        /// </summary>
         private static BVHNode BuildRecursive(List<RendererBounds> items, int leafSize)
         {
+            // ノードが覆う境界を計算
             Bounds nodeBounds = items[0].Bounds;
             for (int i = 1; i < items.Count; ++i)
                 nodeBounds.Encapsulate(items[i].Bounds);
 
+            // 閾値以下なら葉ノードとして生成
             if (items.Count <= leafSize)
             {
                 var node = new BVHNode
@@ -66,6 +84,7 @@ namespace Optim.BVH
                 return node;
             }
 
+            // 最も長い軸でソートし、SAH で分割位置を求める
             int axis = LargestAxis(nodeBounds.size);
             items.Sort((a, b) => a.Bounds.center[axis].CompareTo(b.Bounds.center[axis]));
 
@@ -79,6 +98,9 @@ namespace Optim.BVH
             return result;
         }
 
+        /// <summary>
+        /// SAH を用いて分割位置のインデックスを計算します。
+        /// </summary>
         private static int FindSplitIndex(List<RendererBounds> items, int axis)
         {
             int count = items.Count;
@@ -115,6 +137,9 @@ namespace Optim.BVH
             return bestIndex;
         }
 
+        /// <summary>
+        /// 与えられたサイズベクトルの中で最も大きい軸を返します。
+        /// </summary>
         private static int LargestAxis(Vector3 size)
         {
             if (size.y > size.x && size.y >= size.z)
@@ -124,6 +149,9 @@ namespace Optim.BVH
             return 0;
         }
 
+        /// <summary>
+        /// 境界ボックスの表面積を計算します。
+        /// </summary>
         private static float SurfaceArea(Bounds b)
         {
             Vector3 s = b.size;
