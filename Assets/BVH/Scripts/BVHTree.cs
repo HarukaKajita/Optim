@@ -25,6 +25,13 @@ namespace Optim.BVH
         /// </summary>
         public void Build(IReadOnlyList<Renderer> renderers, int leafSize = 4)
         {
+            if (renderers == null || renderers.Count == 0)
+            {
+                Root = null;
+                BuildTimeSeconds = 0f;
+                return;
+            }
+
             var list = new List<RendererBounds>(renderers.Count);
             foreach (var r in renderers)
                 list.Add(new RendererBounds { Renderer = r, Bounds = r.bounds });
