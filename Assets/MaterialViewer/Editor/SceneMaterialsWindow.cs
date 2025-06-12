@@ -56,7 +56,7 @@ namespace Optim.MaterialViewer.Editor
 
         private readonly List<MaterialInfo> materials = new();
         private MultiColumnListView listView;
-        private VisualElement detailContainer;
+        private ScrollView detailContainer;
         private MaterialInfo selected;
         private SortSettingRowListData sortSettings;
 
