@@ -27,11 +27,13 @@ namespace Optim.BVH.Editor
 
         public static void Open(SceneBVHTree tree)
         {
+            Debug.Log($"Opening BVH Viewer for {tree?.name ?? "null"}");
             GetWindow<BVHViewerWindow>("BVH Viewer").SetTarget(tree);
         }
 
         public void CreateGUI()
         {
+            Debug.Log("Creating BVH Viewer Window");
             var split = new TwoPaneSplitView(0, 250, TwoPaneSplitViewOrientation.Horizontal);
 
             treeView = new TreeView
@@ -54,17 +56,11 @@ namespace Optim.BVH.Editor
 
             rootVisualElement.Add(split);
             BVHGizmoDrawer.SelectedNode = null;
-            if (BVHGizmoDrawer.SelectedNode != null)
-                BVHGizmoDrawer.SelectedNode = null;
-                int count = GetRendererCount(node);
-                    ? $"Leaf ({count}) {node.Bounds.center}"
-                    : $"Node ({count}) {node.Bounds.center}";
-            }
         }
 
         private void OnSelectionChanged(IEnumerable<object> selected)
         {
-            var node = selected != null ? System.Linq.Enumerable.FirstOrDefault(selected) as BVHNode : null;
+            var node = selected != null ? Enumerable.FirstOrDefault(selected) as BVHNode : null;
             BVHGizmoDrawer.SelectedNode = node;
             UpdateDetails(node);
         }
@@ -108,6 +104,7 @@ namespace Optim.BVH.Editor
             {
                 CollectRecursive(node.Left, list);
                 CollectRecursive(node.Right, list);
+            }
         }
 
         private static int GetRendererCount(BVHNode node)
@@ -126,8 +123,8 @@ namespace Optim.BVH.Editor
             var label = new Label();
             label.style.unityTextAlign = TextAnchor.MiddleLeft;
             label.style.alignSelf = Align.FlexStart;
-            label.style.unityTextAlign = TextAnchor.MiddleLeft;
             label.style.flexGrow = 1f;
+            label.style.flexShrink = 0;
             return label;
         }
 
@@ -145,6 +142,7 @@ namespace Optim.BVH.Editor
 
         private void SetTarget(SceneBVHTree tree)
         {
+            Debug.Log($"Setting target BVH Tree: {tree?.name ?? "null"}");
             targetTree = tree;
             BVHGizmoDrawer.ActiveTree = tree;
             RefreshTree();
@@ -152,15 +150,21 @@ namespace Optim.BVH.Editor
 
         private void RefreshTree()
         {
+            Debug.Log($"Refreshing BVH Tree for {targetTree?.name ?? "null"}");
             if (treeView == null)
-                return;
-
-            if (targetTree == null || targetTree.Tree.Root == null)
             {
-                treeView.SetRootItems(new List<TreeViewItemData<BVHNode>>());
+                Debug.LogWarning("TreeView is not initialized.");
                 return;
             }
 
+            if (targetTree == null || targetTree.Tree.Root == null)
+            {
+                Debug.LogWarning("No BVH Tree available to display.");
+                treeView.SetRootItems(new List<TreeViewItemData<BVHNode>>());
+                return;
+            }
+            
+            Debug.Log($"Building tree for {targetTree.name} with root node {targetTree.Tree.Root.Bounds}");
             int id = 0;
             var rootItem = BuildItem(targetTree.Tree.Root, ref id);
             treeView.SetRootItems(new List<TreeViewItemData<BVHNode>> { rootItem });
@@ -188,10 +192,11 @@ namespace Optim.BVH.Editor
             if (treeView.GetItemDataForIndex<BVHNode>(index) is BVHNode node)
             {
                 var volume = node.Bounds.size.x * node.Bounds.size.y * node.Bounds.size.z;
+                int count = GetRendererCount(node);
                 var label = element as Label;
                 label.text = node.IsLeaf
-                    ? $"Leaf ({node.Renderers.Count}) {volume:F2} m³"
-                    : $"Node {volume:F2} m³";
+                    ? $"Leaf ({count} renderers) {volume:F2} m³"
+                    : $"Node ({count} renderers) {volume:F2} m³";
             }
         }
     }
