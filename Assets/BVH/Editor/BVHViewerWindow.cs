@@ -111,8 +111,8 @@ namespace Optim.BVH.Editor
                 var volume = node.Bounds.size.x * node.Bounds.size.y * node.Bounds.size.z;
                 var label = element as Label;
                 label.text = node.IsLeaf
-                    ? $"Leaf ({node.Renderers.Count}) {volume}"
-                    : $"Node {volume}";
+                    ? $"Leaf ({node.Renderers.Count}) {volume:F2} m³"
+                    : $"Node {volume:F2} m³";
             }
         }
     }
