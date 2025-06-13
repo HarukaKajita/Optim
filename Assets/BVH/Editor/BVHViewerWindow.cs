@@ -27,6 +27,8 @@ namespace Optim.BVH.Editor
 
         public static void Open(SceneBVHTree tree)
         {
+            treeView.style.flexGrow = 1;
+            rendererList.style.flexGrow = 1;
             Debug.Log($"Opening BVH Viewer for {tree?.name ?? "null"}");
             GetWindow<BVHViewerWindow>("BVH Viewer").SetTarget(tree);
         }
