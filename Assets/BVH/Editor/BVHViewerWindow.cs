@@ -33,6 +33,7 @@ namespace Optim.BVH.Editor
                 makeItem = MakeItem,
                 bindItem = BindItem
             };
+            treeView.showAlternatingRowBackgrounds = AlternatingRowBackground.All;
             rootVisualElement.Add(treeView);
             RefreshTree();
         }
@@ -45,7 +46,9 @@ namespace Optim.BVH.Editor
         {
             var label = new Label();
             label.style.unityTextAlign = TextAnchor.MiddleLeft;
-            label.style.alignSelf = Align.Center;
+            label.style.alignSelf = Align.FlexStart;
+            label.style.unityTextAlign = TextAnchor.MiddleLeft;
+            label.style.flexGrow = 1f;
             return label;
         }
 
@@ -105,9 +108,11 @@ namespace Optim.BVH.Editor
         {
             if (treeView.GetItemDataForIndex<BVHNode>(index) is BVHNode node)
             {
-                ((Label)element).text = node.IsLeaf
-                    ? $"Leaf ({node.Renderers.Count}) {node.Bounds.center}"
-                    : $"Node {node.Bounds.center}";
+                var volume = node.Bounds.size.x * node.Bounds.size.y * node.Bounds.size.z;
+                var label = element as Label;
+                label.text = node.IsLeaf
+                    ? $"Leaf ({node.Renderers.Count}) {volume}"
+                    : $"Node {volume}";
             }
         }
     }
