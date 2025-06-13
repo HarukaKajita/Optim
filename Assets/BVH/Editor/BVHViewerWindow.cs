@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
@@ -13,6 +14,9 @@ namespace Optim.BVH.Editor
     {
         private SceneBVHTree targetTree;
         private TreeView treeView;
+        private VisualElement detailPane;
+        private Label detailLabel;
+        private ListView rendererList;
 
         [MenuItem("Window/BVH Viewer")]
         private static void OpenFromMenu()
@@ -28,14 +32,89 @@ namespace Optim.BVH.Editor
 
         public void CreateGUI()
         {
+            var split = new TwoPaneSplitView(0, 250, TwoPaneSplitViewOrientation.Horizontal);
+
             treeView = new TreeView
             {
                 makeItem = MakeItem,
-                bindItem = BindItem
+                bindItem = BindItem,
+                selectionType = SelectionType.Single
             };
-            treeView.showAlternatingRowBackgrounds = AlternatingRowBackground.All;
-            rootVisualElement.Add(treeView);
-            RefreshTree();
+            treeView.selectionChanged += OnSelectionChanged;
+            split.Add(treeView);
+
+            detailPane = new VisualElement();
+            detailPane.style.flexGrow = 1;
+            detailPane.style.paddingLeft = 4;
+            detailLabel = new Label();
+            rendererList = new ListView();
+            detailPane.Add(detailLabel);
+            detailPane.Add(rendererList);
+            split.Add(detailPane);
+
+            rootVisualElement.Add(split);
+            BVHGizmoDrawer.SelectedNode = null;
+            if (BVHGizmoDrawer.SelectedNode != null)
+                BVHGizmoDrawer.SelectedNode = null;
+                int count = GetRendererCount(node);
+                    ? $"Leaf ({count}) {node.Bounds.center}"
+                    : $"Node ({count}) {node.Bounds.center}";
+            }
+        }
+
+        private void OnSelectionChanged(IEnumerable<object> selected)
+        {
+            var node = selected != null ? System.Linq.Enumerable.FirstOrDefault(selected) as BVHNode : null;
+            BVHGizmoDrawer.SelectedNode = node;
+            UpdateDetails(node);
+        }
+
+        private void UpdateDetails(BVHNode node)
+        {
+            if (node == null)
+            {
+                detailLabel.text = string.Empty;
+                rendererList.itemsSource = null;
+                rendererList.Rebuild();
+                return;
+            }
+
+            var renderers = CollectRenderers(node);
+            detailLabel.text = $"Center: {node.Bounds.center}\nSize: {node.Bounds.size}\nRenderers: {renderers.Count}";
+
+            if (rendererList.makeItem == null)
+                rendererList.makeItem = () => new Label();
+            if (rendererList.bindItem == null)
+                rendererList.bindItem = (ve, i) => ((Label)ve).text = ((Renderer)rendererList.itemsSource[i]).name;
+            rendererList.itemsSource = renderers;
+            rendererList.Rebuild();
+        }
+
+        private static List<Renderer> CollectRenderers(BVHNode node)
+        {
+            var list = new List<Renderer>();
+            CollectRecursive(node, list);
+            return list;
+        }
+
+        private static void CollectRecursive(BVHNode node, List<Renderer> list)
+        {
+            if (node == null) return;
+            if (node.IsLeaf)
+            {
+                list.AddRange(node.Renderers);
+            }
+            else
+            {
+                CollectRecursive(node.Left, list);
+                CollectRecursive(node.Right, list);
+        }
+
+        private static int GetRendererCount(BVHNode node)
+        {
+            if (node == null) return 0;
+            if (node.IsLeaf) return node.Renderers.Count;
+            return GetRendererCount(node.Left) + GetRendererCount(node.Right);
         }
 
         /// <summary>

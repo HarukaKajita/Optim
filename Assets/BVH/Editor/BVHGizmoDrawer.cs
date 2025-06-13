@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using Optim.BVH;
 
 namespace Optim.BVH.Editor
 {
@@ -10,6 +11,7 @@ namespace Optim.BVH.Editor
     internal static class BVHGizmoDrawer
     {
         public static SceneBVHTree ActiveTree { get; set; }
+        public static BVHNode SelectedNode { get; set; }
 
         static BVHGizmoDrawer()
         {
@@ -21,9 +23,12 @@ namespace Optim.BVH.Editor
             if (ActiveTree == null || ActiveTree.Tree.Root == null)
                 return;
 
-            Handles.color = Color.green;
             foreach (var node in ActiveTree.Tree.Traverse())
             {
+                if (node == SelectedNode)
+                    Handles.color = Color.yellow;
+                else
+                    Handles.color = new Color(0f, 1f, 0f, 0.25f);
                 Handles.DrawWireCube(node.Bounds.center, node.Bounds.size);
             }
         }
