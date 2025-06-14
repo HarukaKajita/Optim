@@ -12,8 +12,10 @@ namespace Optim.BVH
         /// <summary>このノード全体を包む境界ボックス。</summary>
         public Bounds Bounds;
         /// <summary>左側のオブジェクトを保持する子ノード。</summary>
+        [SerializeReference]
         public BVHNode Left;
         /// <summary>右側のオブジェクトを保持する子ノード。</summary>
+        [SerializeReference]
         public BVHNode Right;
         /// <summary>葉ノードの場合に保持する Renderer リスト。内部ノードの場合は <c>null</c>。</summary>
         public List<Renderer> Renderers;

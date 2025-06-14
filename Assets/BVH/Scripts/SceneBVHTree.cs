@@ -14,7 +14,7 @@ namespace Optim.BVH
         [SerializeField]
         private int leafSize = 4;
 
-        [SerializeField, HideInInspector]
+        [SerializeField]
         private BVHTree tree = new BVHTree();
 
         /// <summary>構築済み BVH への参照。</summary>

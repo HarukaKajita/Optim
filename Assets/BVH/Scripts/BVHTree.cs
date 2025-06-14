@@ -11,7 +11,7 @@ namespace Optim.BVH
     public class BVHTree
     {
         /// <summary>構築された BVH のルートノード。</summary>
-        [SerializeField, HideInInspector]
+        [SerializeField]
         private BVHNode root;
         /// <summary>BVH 構築に要した時間 (秒)。</summary>
         [SerializeField, HideInInspector]
