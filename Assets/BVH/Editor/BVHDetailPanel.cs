@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -83,7 +85,16 @@ namespace Optim.BVH.Editor
             if (rendererList.makeItem == null)
                 rendererList.makeItem = () => new Label(); // 各行のUI要素生成
             if (rendererList.bindItem == null)
+            {
                 rendererList.bindItem = (ve, i) => ((Label)ve).text = ((Renderer)rendererList.itemsSource[i]).name; // データのバインド
+                // ダブルクリックで選択されたレンダラーをHierarchyで選択状態にする
+                rendererList.itemsChosen += (objects) =>
+                {
+                    var selectedRenderers = objects.Cast<Renderer>().ToArray();
+                    Selection.objects = selectedRenderers.ToArray<Object>();
+                    EditorGUIUtility.PingObject(selectedRenderers[0]);
+                };
+            }
             
             // レンダラーリストを更新
             rendererList.itemsSource = renderers;
